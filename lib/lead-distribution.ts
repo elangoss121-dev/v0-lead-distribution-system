@@ -206,12 +206,10 @@ export async function getProviderDashboard(providerId: string) {
   const today = new Date()
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
 
-  const quotaLog = await prisma.providerQuotaLog.findUnique({
+  const quotaLog = await prisma.providerQuotaLog.findFirst({
     where: {
-      provider_id_month_start_date: {
-        provider_id: providerId,
-        month_start_date: monthStart,
-      },
+      provider_id: providerId,
+      month_start_date: monthStart,
     },
   })
 
