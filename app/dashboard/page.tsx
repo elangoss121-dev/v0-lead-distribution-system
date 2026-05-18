@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { io, Socket } from 'socket.io-client'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,12 +27,22 @@ interface DashboardData {
   leads: Lead[]
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
+  const searchParams = useSearchParams()
   const [providerId, setProviderId] = useState('')
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(false)
   const [socket, setSocket] = useState<Socket | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Load providerId from URL params on mount
+  useEffect(() => {
+    const urlProviderId = searchParams.get('providerId')
+    if (urlProviderId) {
+      setProviderId(urlProviderId)
+      fetchDashboard(urlProviderId)
+    }
+  }, [searchParams])
 
   // Initialize Socket.IO connection
   useEffect(() => {
@@ -205,5 +216,22 @@ export default function DashboardPage() {
         </Card>
       </div>
     </main>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-background p-6">
+        <div className="max-w-md mx-auto">
+          <Card className="p-8">
+            <h1 className="text-2xl font-bold text-foreground mb-6">Provider Dashboard</h1>
+            <p className="text-muted-foreground">Loading...</p>
+          </Card>
+        </div>
+      </main>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
