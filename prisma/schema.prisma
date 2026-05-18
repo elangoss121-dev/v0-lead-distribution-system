@@ -11,95 +11,110 @@ datasource db {
 }
 
 model Service {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   providers         ProviderAssignment[]
   leads             Lead[]
-  allocationPointer AllocationPointer?
+  allocationPointers AllocationPointer[]
 
-  @@map("services")
+  @@map("service")
 }
 
 model Provider {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  name                String
+  email               String   @unique
+  phone               String?
+  monthly_quota_limit Int      @default(10)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
-  assignments ProviderAssignment[]
-  leads       Lead[]
-  quotaLogs   ProviderQuotaLog[]
+  assignments    ProviderAssignment[]
+  quotaLogs      ProviderQuotaLog[]
+  allocationPtrs AllocationPointer[]
+  assignedLeads  AssignedLead[]
 
-  @@map("providers")
+  @@map("provider")
 }
 
 model ProviderAssignment {
-  id         String   @id @default(cuid())
-  serviceId  String
-  providerId String
-  mandatory  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default(uuid())
+  service_id  String
+  provider_id String
+  is_mandatory Boolean  @default(false)
+  created_at  DateTime @default(now())
 
-  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  service  Service  @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [provider_id], references: [id], onDelete: Cascade)
 
-  @@unique([serviceId, providerId])
-  @@map("provider_assignments")
+  @@unique([service_id, provider_id])
+  @@map("provider_assignment")
 }
 
 model Lead {
-  id        String   @id @default(cuid())
-  phone     String
-  name      String
-  email     String?
-  serviceId String
-  providerId String?
-  status    String   @default("pending") // pending, assigned, completed, failed
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid())
+  service_id String
+  phone      String
+  email      String?
+  name       String?
+  created_at DateTime @default(now())
 
-  service  Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  provider Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  service       Service       @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  assignedLeads AssignedLead[]
 
-  @@unique([phone, serviceId])
-  @@map("leads")
+  @@unique([phone, service_id])
+  @@map("lead")
 }
 
 model ProviderQuotaLog {
-  id         String   @id @default(cuid())
-  providerId String
-  serviceId  String
-  leadsCount Int      @default(0)
-  monthYear  String   // Format: YYYY-MM
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  provider_id           String
+  leads_assigned_this_month Int @default(0)
+  month_start_date      DateTime
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
 
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [provider_id], references: [id], onDelete: Cascade)
 
-  @@unique([providerId, serviceId, monthYear])
-  @@map("provider_quota_logs")
+  @@unique([provider_id, month_start_date])
+  @@map("provider_quota_log")
 }
 
 model AllocationPointer {
-  id        String   @id @default(cuid())
-  serviceId String   @unique
-  pointer   Int      @default(0)
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(uuid())
+  service_id     String
+  provider_id    String
+  current_position Int    @default(0)
+  updated_at     DateTime @updatedAt
 
-  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  service  Service  @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [provider_id], references: [id], onDelete: Cascade)
 
-  @@map("allocation_pointers")
+  @@unique([service_id, provider_id])
+  @@map("allocation_pointer")
 }
 
 model WebhookIdempotencyKey {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  timestamp DateTime @default(now())
+  id              String   @id @default(uuid())
+  idempotency_key String   @unique
+  timestamp       DateTime @default(now())
 
-  @@map("webhook_idempotency_keys")
+  @@map("webhook_idempotency_key")
+}
+
+model AssignedLead {
+  id         String   @id @default(uuid())
+  lead_id    String
+  provider_id String
+  assigned_at DateTime @default(now())
+
+  lead     Lead     @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [provider_id], references: [id], onDelete: Cascade)
+
+  @@unique([lead_id, provider_id])
+  @@map("assigned_lead")
 }
