@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
+}
+
+model Service {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  providers         ProviderAssignment[]
+  leads             Lead[]
+  allocationPointer AllocationPointer?
+
+  @@map("services")
+}
+
+model Provider {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments ProviderAssignment[]
+  leads       Lead[]
+  quotaLogs   ProviderQuotaLog[]
+
+  @@map("providers")
+}
+
+model ProviderAssignment {
+  id         String   @id @default(cuid())
+  serviceId  String
+  providerId String
+  mandatory  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, providerId])
+  @@map("provider_assignments")
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  phone     String
+  name      String
+  email     String?
+  serviceId String
+  providerId String?
+  status    String   @default("pending") // pending, assigned, completed, failed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  service  Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@unique([phone, serviceId])
+  @@map("leads")
+}
+
+model ProviderQuotaLog {
+  id         String   @id @default(cuid())
+  providerId String
+  serviceId  String
+  leadsCount Int      @default(0)
+  monthYear  String   // Format: YYYY-MM
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, serviceId, monthYear])
+  @@map("provider_quota_logs")
+}
+
+model AllocationPointer {
+  id        String   @id @default(cuid())
+  serviceId String   @unique
+  pointer   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("allocation_pointers")
+}
+
+model WebhookIdempotencyKey {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  timestamp DateTime @default(now())
+
+  @@map("webhook_idempotency_keys")
+}
