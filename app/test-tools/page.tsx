@@ -22,7 +22,7 @@ export default function TestToolsPage() {
         body: JSON.stringify({ action: 'list-services' }),
       })
       const data = await response.json()
-      setServices(data)
+      setServices(Array.isArray(data) ? data : data.services || [])
     } catch (error) {
       console.error('Error loading services:', error)
     }
@@ -36,7 +36,7 @@ export default function TestToolsPage() {
         body: JSON.stringify({ action: 'list-providers' }),
       })
       const data = await response.json()
-      setProviders(data)
+      setProviders(Array.isArray(data) ? data : data.providers || [])
     } catch (error) {
       console.error('Error loading providers:', error)
     }

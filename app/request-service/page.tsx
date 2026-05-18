@@ -1,11 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 
+interface Service {
+  id: string
+  name: string
+  description?: string
+}
+
 export default function RequestServicePage() {
+  const [services, setServices] = useState<Service[]>([])
   const [formData, setFormData] = useState({
     serviceId: '',
     phone: '',
@@ -13,7 +20,29 @@ export default function RequestServicePage() {
     name: '',
   })
   const [loading, setLoading] = useState(false)
+  const [loadingServices, setLoadingServices] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Fetch available services on mount
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const response = await fetch('/api/services')
+        const data = await response.json()
+        if (data.services) {
+          setServices(data.services)
+          if (data.services.length > 0) {
+            setFormData(prev => ({ ...prev, serviceId: data.services[0].id }))
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch services:', error)
+      } finally {
+        setLoadingServices(false)
+      }
+    }
+    fetchServices()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -40,7 +69,7 @@ export default function RequestServicePage() {
         type: 'success',
         text: `Lead created and assigned to ${data.assignedProviders.length} provider(s)`,
       })
-      setFormData({ serviceId: '', phone: '', email: '', name: '' })
+      setFormData({ ...formData, phone: '', email: '', name: '' })
     } catch (error) {
       setMessage({
         type: 'error',
@@ -60,15 +89,26 @@ export default function RequestServicePage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Service ID
+                Service
               </label>
-              <Input
-                type="text"
-                placeholder="Enter service ID"
-                value={formData.serviceId}
-                onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
-                required
-              />
+              {loadingServices ? (
+                <div className="text-muted-foreground text-sm">Loading services...</div>
+              ) : services.length === 0 ? (
+                <div className="text-muted-foreground text-sm">No services available</div>
+              ) : (
+                <select
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                  value={formData.serviceId}
+                  onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
+                  required
+                >
+                  {services.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
@@ -86,11 +126,11 @@ export default function RequestServicePage() {
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Email
+                Email (optional)
               </label>
               <Input
                 type="email"
-                placeholder="Enter email (optional)"
+                placeholder="Enter email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
@@ -98,33 +138,39 @@ export default function RequestServicePage() {
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Name
+                Name (optional)
               </label>
               <Input
                 type="text"
-                placeholder="Enter name (optional)"
+                placeholder="Enter name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
 
-            {message && (
-              <div
-                className={`p-4 rounded text-sm ${
-                  message.type === 'success'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}
-              >
-                {message.text}
-              </div>
-            )}
-
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" className="w-full" disabled={loading || services.length === 0}>
               {loading ? 'Submitting...' : 'Submit Request'}
             </Button>
           </form>
+
+          {message && (
+            <div
+              className={`mt-4 p-4 rounded-md ${
+                message.type === 'success'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
         </Card>
+
+        <div className="mt-4 text-center">
+          <a href="/" className="text-primary hover:underline">
+            Back to Home
+          </a>
+        </div>
       </div>
     </main>
   )
