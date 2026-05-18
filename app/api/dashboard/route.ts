@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getProviderDashboard } from '@/lib/lead-distribution'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { distributeLead } from '@/lib/lead-distribution'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(req: NextRequest) {
   try {
     const { serviceId, phone, email, name, idempotencyKey } = await req.json()

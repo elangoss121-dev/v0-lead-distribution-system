@@ -35,6 +35,13 @@ export function initializeIO(httpServer: HTTPServer): SocketIOServer {
 }
 
 export function broadcastLeadAssignment(providerId: string, leadData: any) {
-  const io = getIO()
-  io.to(`provider:${providerId}`).emit('lead_assigned', leadData)
+  try {
+    const io = getIO()
+    io.to(`provider:${providerId}`).emit('lead_assigned', leadData)
+  } catch (error) {
+    // Socket.IO server not initialized (e.g., during build), silently fail
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[v0] Socket.io broadcast not available: ${error}`)
+    }
+  }
 }
